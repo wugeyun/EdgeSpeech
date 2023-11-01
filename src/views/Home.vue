@@ -2,7 +2,7 @@
   <div class="home">
     <!-- <img alt="Vue logo" src="../assets/logo.png">
     <HelloWorld msg="第一个wpa应用"/> -->
-    <p style="font-size: 20px; font-weight: bold">大声朗读</p>
+    <p style="font-size: 20px; font-weight: bold">在线朗读</p>
     <p style="margin-bottom: 30px; color: #999">
       基于微软edge浏览器大声朗读功能开发的pwa应用
     </p>
@@ -93,7 +93,14 @@
         <a-switch :checked="recordStatus" @change="onChange" />
       </a-col>
     </a-row>
-    <p class="link" @click="push">Github中查看</p>
+    <a-row type="flex" justify="space-between" align="middle" class="pb10">
+      <a-col class="flex-wrap">
+        <!-- 在你的模板中添加停止按钮 -->
+        <button @click="stopRecording">停止录音</button>
+      </a-col>
+    </a-row>
+
+    <p class="link" @click="push">www.wuge.xyz</p>
   </div>
 </template>
 <style scoped>
@@ -291,7 +298,7 @@ export default {
     },
     // 跳转至 github仓库地址
     push() {
-      window.location.href="https://github.com/guozhigq/ReadAloud"
+      window.location.href="http://www.wuge.xyz"
     },
 
     // 新建 MediaRecorder对象
@@ -315,13 +322,51 @@ export default {
         /* handle the error */
       });
     },
-    // 创建录音实例
-    recorderFn(stream) {
-      let mediaRecorder = new MediaRecorder(stream);
-      mediaRecorder.start();
-      console.log('录音中...')
+  // 手动停止录音
+  stopRecording() {
+    if (this.mediaRecorder && this.mediaRecorder.state === 'recording') {
+      this.mediaRecorder.stop();
+    }
+  },
 
-    },
+  // 创建录音实例
+  recorderFn(stream) {
+    // 创建 MediaRecorder 实例并存储在组件的数据中
+    this.mediaRecorder = new MediaRecorder(stream);
+    let audioChunks = [];
+
+    // 当有数据可用时的事件处理程序
+    this.mediaRecorder.ondataavailable = event => {
+      if (event.data.size > 0) {
+        audioChunks.push(event.data);
+      }
+    };
+
+    // 当录音停止时的事件处理程序
+    this.mediaRecorder.onstop = () => {
+      // 从音频块创建 Blob
+      let audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+
+      // 创建一个临时 URL 用于下载
+      let audioUrl = URL.createObjectURL(audioBlob);
+
+      // 创建下载链接
+      let downloadLink = document.createElement('a');
+      downloadLink.href = audioUrl;
+      downloadLink.download = 'recorded_audio.wav'; // 设置下载文件名
+
+      // 将链接附加到 DOM，并通过编程方式触发点击以触发下载
+      document.body.appendChild(downloadLink);
+      downloadLink.click();
+
+      // 清理工作
+      URL.revokeObjectURL(audioUrl);
+      audioChunks = []; // 为将来的录音重置音频块数组
+    };
+
+    // 开始录音
+    this.mediaRecorder.start();
+  },
   },
 };
 </script>
